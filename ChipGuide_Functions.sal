@@ -1,0 +1,214 @@
+; The following function defines an arpeggiator. The pattern represents in which order the provided notes must be played. For example, the default pattern provided below will generate the sequence c4 e4 g4 c5, while a pattern 4 3 2 3 would result in the sequence c5 g4 e4 g4. The speed is the number of nodes per measure, the duration is simply how long these notes are. 
+
+;================= ARPEGGIATOR BEGINNING ====================================
+
+define function chip-arpeggiator(synth, notes: {c4 e4 g4 c5}, pattern: {1 2 3 4}, speed: 16, duration: 20, bpm: 120, measures: 1)
+  begin
+  with time-measure = 4 * 60 / float(bpm), 
+       ioi = time-measure / speed, 
+       arp-pattern = make-cycle(pattern)
+  return score-set-end(score-repeat(score-gen(
+            name: synth,          
+            score-len: speed,
+            ioi: ioi,
+            pitch: nth(next(arp-pattern) - 1, notes),
+            duration: duration), 
+            measures), time-measure * measures)
+            
+    
+  end
+
+
+;================= ARPEGGIATOR END ==========================================
+
+; The random melody maker has a more complicated mechanic. It takes a scale and a chord as input (the "scale" and "notes" fields). It assigns a probability to each note in a scale, 1 if it's also in the chord, 0.3 otherwise. This way, it can pick notes randomly in a scale but favor those in the current chord. With a probability given by the user, a note can also have pitch -100, which corresponds to a silence. This means that not only will the notes be random, but the rythm will be random as well.
+
+;================= RANDOM MELODY MAKER BEGINNING ============================
+
+define function random-melody-maker(my-synth, my-scale: list(c4, d4, e4, f4, g4, a4, b4), notes: list(c4, e4, g4, c5), speed: 8, proba: 0.5, bpm: 120, measures: 1, duration: 20)
+  begin
+    with note-likelihood = list(),
+          time-measure = 4 * 60 / float(bpm),
+         total-proba = 0
+    
+    set new-notes = list()
+    
+    loop
+      for k from 0 below length(notes)
+      set new-notes = append(new-notes, list(symbol-value(nth(k, notes))))
+    end
+    
+    loop
+    for k from 0 below length(my-scale)
+          if length(member(nth(k, my-scale), new-notes)) > 0 then
+        begin
+              set note-likelihood  = append(note-likelihood, list(list(nth(k, my-scale), weight: 1)))  
+              set total-proba = total-proba + 1
+            end
+           
+          else
+        begin
+              set note-likelihood = append(note-likelihood, list(list(nth(k, my-scale), weight: 0.3)))
+              set total-proba = total-proba + 0.3
+              end
+    end
+    set note-list-length = round(speed * measures)
+    set note-list = make-random(append(note-likelihood, list(list(-100, weight: total-proba * (( 1 - proba) / proba) ))), for: note-list-length)
+    return score-set-end(score-gen(
+            name: my-synth,          
+            score-len: note-list-length,
+            ioi: time-measure / speed,
+            pitch: next(note-list),
+            duration: duration),  
+            time-measure * measures)
+    
+end
+
+
+;================= RANDOM MELODY MAKER END ==================================
+
+; The chord player simply plays a full chord using the provided instrument.
+
+;================= CHORD PLAYER BEGINNING ===================================
+
+define function chord-player(synth, notes: {c4 e4 g4 c5}, humanization: 0.0, duration: 1, bpm: 120, measures: 1)
+  begin
+    with time-measure = 4 * 60 / float(bpm),
+         ioi = 0.01 + humanization * rrandom(),
+         arp-pattern = make-cycle(notes)
+  return score-repeat(score-set-end(score-gen(
+            name: synth,          
+            score-len: length(notes),
+            ioi: ioi,
+            pitch: next(arp-pattern),
+            duration: duration * 100),  
+            time-measure),
+            measures)
+            
+    
+  end
+
+
+;================= CHORD PLAYER END =========================================
+
+set chord-prog1 = {{a3 c4 e4 a4} {a3 c4 f4 a4} {g3 c4 e4 g4} {g3 b3 d4 g4}}
+set chord-prog2 = {{e3 a3 c4 e4} {d3 g3 b3 d4} {c3 f3 a3 c4} {d3 f3 a3 d4}}
+set chord-prog3 = {{d3 fs3 a3 d4} {cs3 fs3 a3 cs4} {d3 fs3 b3 d4} {d3 g3 b3 d4}}
+
+; The chord sequencer brings the 3 functions above together. Taking a chord progression as an input, it generates a melody for each chord and chains them. Depending on whether "type" is set to 0, 1 or 2, the melody will be a simple chord, an arpeggio or a randomly generated melody.
+
+;================= CHORD SEQUENCER BEGINNING =================================
+
+define function chord-sequencer(instr, type, chord_list, pattern: {1}, speed: 16, duration: 1, bpm: 120, measures: 4, humanization: 0.0, proba: 0.5, my-scale:{c4 d4 e4 f4 g4 a4 b4})
+  begin
+    with time-measure = 4 * 60 / float(bpm),
+         total_time = time-measure * length(chord_list) * measures,
+         score = {{0 0 {SCORE-BEGIN-END 0 0}}}
+    if type = 0 then
+      begin
+      loop
+      for k from 0 below length(chord_list)
+      set score = score-append(score, chord-player(instr, notes: nth(k, chord_list), humanization: humanization, duration: duration, bpm: bpm, measures: measures))
+        end
+        end
+    else
+      if type = 1 then
+        begin
+      loop
+        for k from 0 below length(chord_list)
+        set score = score-append(score, chip-arpeggiator(instr, notes: nth(k, chord_list), pattern: pattern, speed: speed, duration: duration, bpm: bpm, measures: measures))
+        end
+        end
+      else
+        begin
+                loop
+        for k from 0 below length(chord_list)
+        set score = score-append(score, random-melody-maker(instr, notes: nth(k, chord_list), scale: my-scale, proba: proba, speed: speed, duration: duration, bpm: bpm, measures: measures))
+        end
+        end
+    
+    return score-set-end(score, total_time)
+  end
+
+
+;================= CHORD SEQUENCER END =======================================
+
+; This function takes a list of {score amplitude} tuples and mixes them together accordingly
+
+;================= MIXING FUNCTION BEGINNING =================================
+
+define function mix-scores(values)
+  begin
+    set cur_sound = timed-seq(nth(0, nth(0, values))) * nth(1, nth(0, values))
+    loop
+      for k from 1 below length(values)
+        set cur_sound = cur_sound + timed-seq(nth(0, nth(k, values))) * nth(1, nth(k, values))
+      end
+      return cur_sound
+  end
+
+;================= MIXING FUNCTION END =======================================
+
+; The structure maker takes a list of elements of a song as SOUNDS (e.g. a verse, a chorus…) and repeats them in a sequence defined by the user. All the elements should have the same number of measures, and this number should be provided by the user. 
+
+;================= STRUCTURE MAKER BEGINNING =================================
+
+define function structure-maker(elems, order, bpm, measures)
+  begin
+    set final_structure = cue(nth(nth(0, order) - 1, elems))
+    loop
+      for k from 1 below length(order)
+      set struct_time = 60 / float(bpm) * 4 * measures * k
+      set final_structure = sim(final_structure, cue(nth(nth(k, order) - 1, elems)) @ struct_time)
+    end
+    return final_structure
+  end
+
+
+;================= STRUCTURE MAKER END =======================================
+
+; The side chain function generates a list which, if put in an envelope, corresponds to an amplitude that diminishes every time a kick (with the score provided by the user) happens. This envelope can be applied to any instrument.
+
+;================= SIDE CHAIN BEGINNING =====================================
+
+define function sidechain(kick-score, strength: 0.9, length-var: 0.15, pre-attack: 0.001, reps: 1)
+  begin
+    set kick-score = score-repeat(kick-score, reps)
+    set kick-envelope = list()
+    set end__ = nth(2, nth(2, nth(0, kick-score)))
+    
+    if nth(0, nth(1, kick-score)) = 0 then
+      begin
+        set kick-envelope = append(kick-envelope, list(1 - strength))
+        set kick-envelope = append(kick-envelope, list(length-var, 1))
+      end
+    else
+      begin
+        set kick-envelope = append(kick-envelope, list(1))
+      end
+    
+    loop
+      for k from 2 below length(kick-score)
+      set kick-envelope = append(kick-envelope, list(nth(0, nth(k, kick-score)) - pre-attack, 1, nth(0, nth(k, kick-score)), 1 - strength, nth(0, nth(k, kick-score)) + length-var, 1))
+    end
+    return append(kick-envelope, list(end__, 1))
+  end
+
+;================= SIDE CHAIN END ============================================
+
+; This function applies a simply EQ (lp and hp), a delay and a reverb using parameters defined by the user. This allows for very quick mixing that only keeps the most essential elements.
+
+;================= EFFECT FUNCTION BEGINNING =================================
+
+define function effect-mixer(sound, bpm: 120, low: 20000, high: 0, delay-strength: 0, delay-speed: 4, reverb-strength: 0)
+  begin
+    with time-del = 60 / (float(bpm) * delay-speed),
+          rev-delay = reverb-strength * 2,
+          feedback = delay-strength
+    return prcrev(
+                  feedback-delay(seq(to-mono(hp(lp(sound, low), high)), s-rest(1)), 
+                                 time-del, feedback), 
+                  rev-delay, reverb-strength)
+  end
+
+;================= EFFECT FUNCTION END =======================================

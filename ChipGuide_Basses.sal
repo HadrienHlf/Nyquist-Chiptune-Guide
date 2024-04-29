@@ -1,0 +1,99 @@
+; Same (unused) 3 helper function as the synths file
+
+define function sawtooth(my-pitch)
+  begin
+    return osc-saw(step-to-hz(my-pitch))
+  end
+
+define function square(my-pitch)
+  begin
+    return osc-pulse(step-to-hz(my-pitch), 0)
+  end
+
+define function sine-(my-pitch)
+  begin
+    return osc(my-pitch)
+  end
+
+; The 5 different basses are defined below. Although they have different types, I chose to keep their name as "chip-bass" for all for clarity purposes. The way they are defined using a note function and a wrapper function as the instrument is the same as for synths, although the first 2 passes also have harmonics as a third function
+
+;================= BASS 1 BEGINNING =========================================
+
+define function note-bass1(my-pitch)
+  begin
+    with b-amp-env1 = pwlv(0, 0.001, 1, 0.95, 1, 1, 0)
+    return ((osc-saw(step-to-hz(my-pitch) * 1.001) + osc-saw(step-to-hz(my-pitch) * 0.5) * 0.5)) * b-amp-env1
+  end
+
+function harmonics-bass1(my-pitch)
+  return simrep(i, 3, note-bass1(hz-to-step(step-to-hz(my-pitch) * (i + 1))) * (1 - i * 0.9))
+
+define function chip-bass-1(pitch: c4, duration: 1)
+  begin
+    return lp(harmonics-bass1(pitch), 130) ~ duration
+  end
+
+;================= BASS 1 END ===============================================
+
+;================= BASS 2 BEGINNING =========================================
+
+define function note-bass2(my-pitch)
+  begin
+    with b-amp-env2 = pwlv(0, 0.005, 1, 0.4, 0.3, 1, 0)
+    return ((osc-saw(step-to-hz(my-pitch) * 1.001) + osc-saw(step-to-hz(my-pitch) * 0.5) * 0.5)) * b-amp-env2
+  end
+
+function harmonics-bass2(my-pitch)
+  return simrep(i, 4, note-bass2(hz-to-step(step-to-hz(my-pitch) * (i + 1))) * (1 - i * 0.3))
+
+define function chip-bass-2(pitch: c4, duration: 1)
+  begin
+    return lp(harmonics-bass2(pitch), 200) ~ duration
+  end
+
+;================= BASS 2 END ===============================================
+
+;================= BASS 3 BEGINNING =========================================
+
+define function note-bass3(my-pitch)
+  begin
+    with b-amp-env3 = pwlv(0, 0.005, 1, 0.85, 0.8, 1, 0)
+    return (osc-tri(step-to-hz(my-pitch)) + pwlv(0.1, 1, 0) * osc-tri(step-to-hz(my-pitch + 12))) * b-amp-env3
+  end
+
+define function chip-bass-3(pitch: c4, duration: 1)
+  begin
+    return lp(note-bass3(pitch), 400) ~ duration
+  end
+
+;================= BASS 3 END ===============================================
+
+;================= BASS 4 BEGINNING =========================================
+
+define function note-bass4(my-pitch)
+  begin
+    with b-amp-env4 = pwlv(0, 0.001, 1, 0.8, 0.7, 1, 0)
+    return (osc-pulse(step-to-hz(my-pitch) * 1.003, pwlv(0, 1, 1)) + osc-pulse(step-to-hz(my-pitch) * 0.997, pwlv(0, 1, 1))) * b-amp-env4
+  end
+
+define function chip-bass-4(pitch: c4, duration: 1)
+  begin
+    return lp(note-bass4(pitch), 400) ~ duration
+  end
+
+;================= BASS 4 END ===============================================
+
+;================= BASS 5 BEGINNING =========================================
+
+define function note-bass5(my-pitch)
+  begin
+    with b-amp-env5 = pwlv(0, 0.001, 1, 0,05, 1, 0.1, 0.05, 0.2, 0.01, 0.3, 0.005, 1, 0)
+    return (osc-pulse(step-to-hz(my-pitch) * 1.003, pwlv(0, 1, 1)) + osc-pulse(step-to-hz(my-pitch) * 0.997, pwlv(0, 1, 1))) * b-amp-env5
+  end
+
+define function chip-bass-5(pitch: c4, duration: 1)
+  begin
+    return areson(lp(note-bass5(pitch), 300), 500, 500) ~ duration
+  end
+
+;================= BASS 5 END ===============================================

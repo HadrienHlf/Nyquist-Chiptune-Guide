@@ -1,0 +1,74 @@
+load "ChipGuide_Synths.sal"
+load "ChipGuide_Basses.sal"
+load "ChipGuide_Functions.sal"
+load "ChipGuide_Drums.sal"
+
+; Chord progression
+
+set my-chord-prog = {{c4 e4 a4} {d4 f4 a4} {d4 g4 b4} {e4 g4 b4}}
+
+; Create the different melodies
+
+set backing-synth = chord-sequencer(quote(chip-keys-6), 0, my-chord-prog,  humanization: 0.0, duration: 4, bpm: 120, measures: 1)
+
+set backing-pad = chord-sequencer(quote(chip-pad-1), 0, my-chord-prog,  humanization: 0.0, duration: 2, bpm: 120, measures: 1)
+
+set arpeggio = chord-sequencer(quote(chip-lead-2), 1, my-chord-prog, pattern: {1 2 3}, bpm: 120, measures: 1, duration: 1.8)
+
+set slow-arpeggio = chord-sequencer(quote(chip-keys-4), 1, my-chord-prog, pattern: {1 2 3}, bpm: 120, measures: 1, duration: 1.8, speed: 4)
+
+set backing-pattern = chord-sequencer(quote(chip-keys-2), 1, my-chord-prog, pattern: {1 2 1 2}, speed: 8, bpm: 120, measures: 1)
+
+set random-synth = chord-sequencer(quote(chip-keys-7), 2, my-chord-prog, bpm: 120, measures: 1, duration: 2, speed: 16, proba: 0.6)
+
+set bass = score-transpose(chord-sequencer(quote(chip-bass-1), 1, my-chord-prog, speed: 8, bpm: 120, measures: 1, duration: 1), keyword(pitch), -24)
+
+; Create the drums
+
+set all-drums-scores = drum_pattern_1(bpm: 120, instr_list: {2 2 1}, path: "/Users/hadrienhelfgott/nyquist")
+set kicksco = score-repeat(nth(0, all-drums-scores), 2)
+set snaresco = score-repeat(nth(1, all-drums-scores), 2)
+set hhsco = score-repeat(nth(2, all-drums-scores), 2)
+
+; Associate different mixing values to each melody
+
+set mix-backing-synth = list(backing-synth, 1)
+set mix-backing-pad = list(backing-pad, 0.003)
+set mix-arpeggio = list(arpeggio, 0.8)
+set mix-slow-arpeggio = list(slow-arpeggio, 0.008)
+set mix-backing-pattern = list(backing-pattern, 3)
+set mix-random-synth = list(random-synth, 1.5)
+
+set mix-bass = list(bass, 1.5)
+set mix-kick = list(kicksco, 2)
+set mix-snare = list(snaresco, 6)
+set mix-hh = list(hhsco, 2)
+
+; Prepare different parts of the piece
+ 
+set intro-1 = effect-mixer(mix-scores(list(mix-backing-pad, mix-arpeggio, mix-backing-pattern)), low: pwlv(400, 8, 900), reverb-strength: 0.1)
+
+set intro-2 = effect-mixer(mix-scores(list(mix-backing-pad, mix-arpeggio, mix-backing-pattern)), low: pwlv(900, 8, 20000), reverb-strength: 0.1)
+
+set verse-1 = effect-mixer(mix-scores(list(mix-backing-synth, mix-backing-pattern, mix-kick, mix-snare)))
+
+set verse-2 = effect-mixer(mix-scores(list(mix-backing-synth, mix-backing-pattern, mix-kick, mix-snare, mix-hh, mix-bass)))
+
+set pre-chorus-1 = effect-mixer(mix-scores(list(mix-backing-pad, mix-slow-arpeggio, mix-backing-pattern)), low: pwlv(400, 8, 900))
+
+set pre-chorus-2 = effect-mixer(mix-scores(list(mix-backing-pad, mix-slow-arpeggio, mix-backing-pattern, mix-kick)), low: pwlv(900, 8, 20000))
+
+set chorus-1 = effect-mixer(mix-scores(list(mix-backing-synth, mix-arpeggio, mix-backing-pattern, mix-random-synth, mix-bass, mix-kick, mix-snare, mix-hh)))
+
+set chorus-2 = effect-mixer(mix-scores(list(mix-backing-synth, mix-arpeggio, mix-backing-pattern, mix-random-synth, mix-bass, mix-kick, mix-snare, mix-hh, mix-backing-pad)))
+
+set outro = effect-mixer(mix-scores(list(mix-backing-synth, mix-arpeggio, mix-backing-pattern, mix-random-synth, mix-backing-pad)), low: pwlv(20000, 8, 400), delay-strength: 0.2)
+
+; Turning off autonorming and giving the final mix a low volume avoids clipping. Just don't forget to turn it back on!
+exec autonorm-off()
+
+; Put everything together
+
+set full-song = to-mono(structure-maker(list(intro-1, intro-2, verse-1, verse-2, pre-chorus-1, pre-chorus-2, chorus-1, chorus-2, outro), {1 2 3 4 5 6 7 8 9}, 120, 4) * 0.03)
+
+; play full-song

@@ -1,0 +1,211 @@
+; These 3 helper functions help generate waves based on pitches alone. I ended up not using them, but kept them in the file for future expension if needed
+
+define function sawtooth(my-pitch)
+  begin
+    return osc-saw(step-to-hz(my-pitch))
+  end
+
+define function square(my-pitch)
+  begin
+    return osc-pulse(step-to-hz(my-pitch), 0)
+  end
+
+define function sine-(my-pitch)
+  begin
+    return osc(my-pitch)
+  end
+
+; Below is the definition of 12 different synths which all have their own characteristics. The first 7 are simple sounds, the other 5 are a bit more original.
+
+; All synths work in a similar way: a "note" function that defines the core sound of the synth, and the actual synth function which allows for duration control and sometimes can be used to add secondary effects (typically high or low passes)
+
+; The synths are divided into 3 categories:
+; - the keys, which are short-attack, short-sustain nodes suited for fast-paced melodies or quick accents
+; - the leads, which are long sustained notes that can be used for slower-paced melodies with presence
+; - the pads, which are slow-attack synths, sustained but less aggressive than the leads, that can be used for background supporting chords or melodies
+
+;================= SYNTH 1 BEGINNING ========================================
+
+define variable *my-table* = 
+                sim(1 * build-harmonic(1, 2048), 
+                    1 * build-harmonic(2, 2048), 
+                    0.5 * build-harmonic(3, 2048), 
+                    1 * build-harmonic(4, 2048),
+                    0.2 * build-harmonic(8, 2048))
+
+set *my-table* = list(*my-table*, hz-to-step(1), #t)
+
+define function chip-keys-1(pitch: c4, duration: 1)
+  begin
+    return (osc(pitch, 1, *my-table*) * pwl(0.012, 1, 0.2, 0.1, 1)) ~ duration
+  end
+
+;================= SYNTH 1 END ==============================================
+
+;================= SYNTH 2 BEGINNING ========================================
+
+define function note-synth2(my-pitch)
+  begin
+    with amp-env2 = pwlv(0, 0.01, 1, 0.3, 0.7, 0.6, 0.7, 1, 0)
+    return (osc-saw(step-to-hz(my-pitch) * 1.004) + osc-saw(step-to-hz(my-pitch) * 0.996)) * amp-env2
+  end
+
+define function chip-lead-1(pitch: c4, duration: 1)
+  begin
+    return lp(sim(cue(note-synth2(pitch) ~ duration), cue(note-synth2(pitch - 12) * 0.01 ~ duration)), 1050)
+  end
+
+;================= SYNTH 2 END ==============================================
+
+;================= SYNTH 3 BEGINNING ========================================
+
+define function note-synth3(my-pitch)
+  begin
+    with amp-env3 = pwlv(0, 0.005, 1, 0.3, 0., 1, 0)
+    return fmosc(my-pitch, osc-saw(step-to-hz(my-pitch + 12))) * amp-env3
+  end
+
+define function chip-keys-2(pitch: c4, duration: 1)
+  begin
+    return note-synth3(pitch) ~ duration
+  end
+
+;================= SYNTH 3 END ==============================================
+
+;================= SYNTH 4 BEGINNING ========================================
+
+define function note-synth4(my-pitch)
+  begin
+    with amp-env4 = pwlv(0, 0.2, 1, 0.7, 1, 1, 0)
+    return lp(osc-saw(step-to-hz(my-pitch) * 1.002) + osc-saw(step-to-hz(my-pitch) * 1.000), 1300) * amp-env4
+  end
+
+define function chip-lead-2(pitch: c4, duration: 1)
+  begin
+    return note-synth4(pitch) ~ duration
+  end
+
+;================= SYNTH 4 END ==============================================
+
+;================= SYNTH 5 BEGINNING ========================================
+
+define function note-synth5(my-pitch)
+  begin
+    with amp-env5 = pwlv(0, 0.2, 1, 0.6, 0.5, 1, 0)
+    return (osc-saw(step-to-hz(my-pitch) * 1.006) + osc-saw(step-to-hz(my-pitch) * 0.994)) * amp-env5
+  end
+
+define function chip-pad-1(pitch: c4, duration: 1)
+  begin
+    return eq-band(lp(reson(sim(cue(note-synth5(pitch) ~ duration), cue(note-synth5(pitch - 12) * 0.01 ~ duration)), 3 * pitch,  4 * pitch),1500), 800, -7, 0.5)
+  end
+
+;================= SYNTH 5 END ==============================================
+
+;================= SYNTH 6 BEGINNING ========================================
+
+define function note-synth6(my-pitch)
+  begin
+    with amp-env6 = pwlv(0, 0.05, 1, 0.2, 0.3, 1, 0)
+    return (osc-pulse(step-to-hz(my-pitch) * 1.006, 0) + osc-pulse(step-to-hz(my-pitch) * 0.994, 0)) * amp-env6
+  end
+
+define function chip-keys-3(pitch: c4, duration: 1)
+  begin
+    return lp(reson(sim(cue(note-synth6(pitch) ~ duration), cue(note-synth6(pitch - 12) * 0.01 ~ duration)), 3 * pitch,  4 * pitch), 3000)
+  end
+
+;================= SYNTH 6 END ==============================================
+
+;================= SYNTH 7 BEGINNING ========================================
+
+define function note-synth7(my-pitch)
+  begin
+    with amp-env7 = pwlv(0, 0.05, 1, 0.25, 0.15, 1, 0)
+    return (osc-pulse(step-to-hz(my-pitch) * 1.006, 0) + osc-pulse(step-to-hz(my-pitch) * 0.994, 0) + osc-pulse(step-to-hz(my-pitch + 12 ) * 1.0006, 0) * 0.05) * amp-env7
+  end
+
+define function chip-keys-4(pitch: c4, duration: 1)
+  begin
+    return lp(reson(sim(cue(note-synth7(pitch) ~ duration), cue(note-synth7(pitch + 12) * 0.1 ~ duration)), 10 * pitch,  3 * pitch), 5000)
+  end
+
+;================= SYNTH 7 END ==============================================
+
+;================= SYNTH 8 BEGINNING ========================================
+
+define function note-synth8(my-pitch)
+  begin
+    with amp-env8 = pwlv(0, 0.01, 1, 0.25, 0.5, 1, 0)
+    return (osc-pulse(step-to-hz(my-pitch) * 1.004, 0) + osc-pulse(step-to-hz(my-pitch) * 0.996, 0) + osc-saw(step-to-hz(my-pitch) * 1.0006) * 0.3)
+  end
+
+define function chip-pad-2(pitch: c4, duration: 1)
+  begin
+    return eq-band(hp(areson(note-synth8(pitch), 2 * pitch, 4 * pitch), 500) * ((2 + lfo(8)) * pwlv(0, 0.45, 1, 0.55, 1, 1, 0)), 1200, -7, 100) ~ duration
+  end
+
+;================= SYNTH 8 END ==============================================
+
+;================= SYNTH 9 BEGINNING ========================================
+
+define function note-synth9(my-pitch)
+  begin
+    with amp-env9 = pwlv(0, 0.01, 1, 0.1, 0.5, 0.25, 0.5, 0.3, 0.2, 1, 0),
+    amp-env9b = pwlv(0, 0.0, 10.5, 1, 1, 0)
+    return (5 * osc-pulse(my-pitch, 0)) * amp-env9 + (osc-saw(step-to-hz(my-pitch - 12) * 1.01) + osc-saw(step-to-hz(my-pitch - 12) * 0.99)) * amp-env9b * 0.02
+  end
+
+define function chip-keys-5(pitch: c4, duration: 1)
+  begin
+    return lp(hp(note-synth9(pitch) ~ duration, 200), 1650)
+  end
+
+;================= SYNTH 9 END ==============================================
+
+;================= SYNTH 10 BEGINNING =======================================
+
+define function note-synth10(my-pitch)
+  begin
+    with amp-env10 = pwlv(0, 0.01, 1, 0.15, 0.2, 1, 0)
+    return areson(osc-tri(step-to-hz(my-pitch)) * amp-env10, 3000 + pwlv(0, 0.5, 2000, 1, 1000), 500)
+  end
+
+define function chip-keys-6(pitch: c4, duration: 1)
+  begin
+    return lp(note-synth10(pitch), 2000) ~ duration
+  end
+
+;================= SYNTH 10 END =============================================
+
+;================= SYNTH 11 BEGINNING =======================================
+
+define function note-synth11(my-pitch)
+  begin
+    with amp-env11 = pwlv(0, 0.2, 0.7, 0.5, 1, 0.8, 0.7, 1, 0)
+    return reson((osc-tri(step-to-hz(my-pitch) * 1.003) + hzosc(step-to-hz(my-pitch) * 0.997) * 0.3) * amp-env11, 2000 + pwlv(500, 1, 0), 200)
+  end
+
+define function chip-pad-3(pitch: c4, duration: 1)
+  begin
+    return lp(note-synth11(pitch), 1700) ~ duration
+  end
+
+;================= SYNTH 11 END =============================================
+
+;================= SYNTH 12 BEGINNING =======================================
+
+define function note-synth12(my-pitch)
+  begin
+    with amp-env12 = pwlv(0, 0.05, 1, 0.2, 1, 0.4, 0.2, 1, 0),
+         amp-env12b = pwlv(0, 0.01, 1, 0.8, 1, 1, 0),
+         width-env = pwlv(-1, 1, 1)
+    return osc-pulse(step-to-hz(my-pitch) * 1.005, width-env) * amp-env12 + osc-pulse(step-to-hz(my-pitch) * 0.995, width-env) * amp-env12 + osc-pulse(step-to-hz(my-pitch + 12), 0) * 0.1 * amp-env12b
+  end
+
+define function chip-keys-7(pitch: c4, duration: 1)
+  begin
+    return lp(note-synth12(pitch), 1700) ~ duration
+  end
+
+;================= SYNTH 12 END =============================================

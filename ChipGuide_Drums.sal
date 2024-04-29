@@ -1,0 +1,128 @@
+; The following function defines a drum player, that simply re-plays the stored drum sound. There are 3 choices for each drum type, and the user must provide the path themselves.
+
+;================= DRUM PLAYER BEGINNING =====================================
+
+define function drum-player(path: "", drum-name: "kick", number: 1)
+  begin
+    with full-path = strcat(path, "/chiptune drum kit/", drum-name, string(number + 48), ".wav")
+    return s-read(full-path)
+  end
+
+;================= DRUM PLAYER END ===========================================
+
+; The following section creates 3 different pre-saved pattern scores that can be played at any time by the user and incorporated to their tracks. The different instrument's scores are returned individually to allow seaprate mixing.
+
+;================= DRUM PATTERN BEGINNING ====================================
+
+define function drum_pattern_1(bpm: 120, instr_list: {1 1 1}, path: "")
+  begin
+    with time-beat = 60 / float(bpm)
+    set kick_ = score-repeat(score-set-end(score-gen(
+            name: quote(drum-player),          
+            score-len: 4,
+            ioi: time-beat,
+            path: path,
+            drum-name: "kick",
+            number: nth(0, instr_list)), time-beat * 4), 2)
+    
+    set snare_ = score-repeat(score-set-end(score-shift(score-gen(
+            name: quote(drum-player),          
+            score-len: 2,
+            ioi: time-beat * 2,
+            path: path,
+            drum-name: "snare",
+            number: nth(1, instr_list)), time-beat), time-beat * 4), 2)
+    
+    set hh_ = score-repeat(score-set-end(score-gen(
+            name: quote(drum-player),          
+            score-len: 8,
+            ioi: time-beat / 2,
+            path: path,
+            drum-name: "hh",
+            number: nth(2, instr_list)), time-beat * 4), 2)
+    
+    return list(kick_, snare_, hh_)
+  end
+
+define function drum_pattern_2(bpm: 120, instr_list: {1 1 1 1}, path: "")
+  begin
+    with time-beat = 60 / float(bpm),
+         kick_iois = make-cycle(list(time-beat * 1.5, time-beat * 0.5, time-beat * 0.25))
+    
+    set kick_ = score-repeat(score-set-end(score-gen(
+            name: quote(drum-player),          
+            score-len: 4,
+            ioi: next(kick_iois),
+            path: path,
+            drum-name: "kick",
+            number: nth(0, instr_list)), time-beat * 4), 2)
+    
+    set snare_ = score-repeat(score-set-end(score-shift(score-gen(
+            name: quote(drum-player),          
+            score-len: 2,
+            ioi: time-beat * 2,
+            path: path,
+            drum-name: "snare",
+            number: nth(1, instr_list)), time-beat), time-beat * 4), 2)
+    
+    set hh_ = score-repeat(score-set-end(score-gen(
+            name: quote(drum-player),          
+            score-len: 8,
+            ioi: time-beat / 2,
+            path: path,
+            drum-name: "hh",
+            number: nth(2, instr_list)), time-beat * 4), 2)
+    
+    set oh_ = score-set-end(score-shift(score-gen(
+            name: quote(drum-player),          
+            score-len: 1,
+            ioi: time-beat,
+            path: path,
+            drum-name: "oh",
+            number: nth(2, instr_list)), time-beat * 6.5), time-beat * 8)
+    
+    return list(kick_, snare_, hh_, oh_)
+  end
+
+define function drum_pattern_3(bpm: 120, instr_list: {1 1 1 1 1 1}, path: "")
+  begin
+    with time-beat = 60 / float(bpm),
+         kick_iois = make-cycle(list(time-beat * 0.5, time-beat * 1, time-beat * 0.5, time-beat * 2, time-beat * 0.5, time-beat * 1, time-beat * 0.5, time-beat * 1.5)),
+         snare_iois = make-cycle(list(time-beat * 0.75, time-beat * 0.5, time-beat * 0.75))
+    
+    set kick_ = score-set-end(score-gen(
+            name: quote(drum-player),          
+            score-len: 9,
+            ioi: next(kick_iois),
+            path: path,
+            drum-name: "kick",
+            number: nth(0, instr_list)), time-beat * 8)
+    
+    set snare_ = score-repeat(score-set-end(score-shift(score-gen(
+            name: quote(drum-player),          
+            score-len: 4,
+            ioi: next(snare_iois),
+            path: path,
+            drum-name: "snare",
+            number: nth(1, instr_list)), time-beat), time-beat * 4), 2)
+    
+    set hh_ = score-repeat(score-set-end(score-gen(
+            name: quote(drum-player),          
+            score-len: 8,
+            ioi: time-beat / 2,
+            path: path,
+            drum-name: "hh",
+            number: nth(2, instr_list)), time-beat * 4), 2)
+    
+    set perc_ = score-repeat(score-set-end(score-shift(score-gen(
+            name: quote(drum-player),          
+            score-len: 1,
+            ioi: time-beat,
+            path: path,
+            drum-name: "perc",
+            number: nth(5, instr_list)), time-beat * 2.5), time-beat * 4), 2)
+    
+    return list(kick_, snare_, hh_, perc_)
+  end
+
+;================= DRUM PATTERN END ==========================================
